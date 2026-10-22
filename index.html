@@ -239,8 +239,14 @@
             generarInputs();
         }
 
-        // Arrancar la interfaz
-        generarInputs();
+                // Forzar la carga limpia en dispositivos móviles al terminar de leer el HTML
+        window.addEventListener('DOMContentLoaded', () => {
+            generarInputs();
+            if (typeof graficoRueda !== 'undefined') {
+                graficoRueda.update();
+            }
+        });
+
     </script>
 </body>
 </html>
