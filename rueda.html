@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rueda de la Vida - Notion</title>
+    
+    <!-- Librerías de Fuentes y Gráficos -->
+    <link href="https://googleapis.com" rel="stylesheet">
+    <script src="https://jsdelivr.net"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 12px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: transparent;
+            color: #37352f;
+            display: flex;
+            justify-content: center;
+        }
+
+        .widget-container {
+            background-color: #fbfbfa;
+            border: 1px solid #edece9;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
+        }
+
+        /* Selector de usuario */
+        .user-selector {
+            display: flex;
+            background-color: #f1f1f0;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .user-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #787774;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .user-btn.active {
+            background-color: #ffffff;
+            color: #37352f;
+            box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Contenedor del gráfico */
+        .chart-box {
+            position: relative;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        /* Panel de control de puntuaciones */
+        .inputs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: #5a5a57;
+        }
+
+        .input-group input {
+            border: 1px solid #dfdfde;
+            border-radius: 6px;
+            padding: 6px;
+            font-size: 0.9rem;
+            background-color: #ffffff;
+            color: #37352f;
+            font-family: inherit;
+            text-align: center;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2383e2;
+        }
+
+        /* Modo Oscuro de Notion */
+        @media (prefers-color-scheme: dark) {
+            .widget-container {
+                background-color: #202020;
+                border-color: #2f2f2f;
+                color: #ffffff;
+            }
+            .user-selector { background-color: #2f2f2f; }
+            .user-btn.active { background-color: #3f3f3f; color: #ffffff; }
+            .user-btn { color: #9b9b9b; }
+            .input-group label { color: #9b9b9b; }
+            .input-group input {
+                background-color: #2f2f2f;
+                border-color: #3f3f3f;
+                color: #ffffff;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="widget-container">
+        <!-- Botones de Cambio de Perfil -->
+        <div class="user-selector">
+            <button class="user-btn active" id="btn-user1" onclick="cambiarUsuario('usuario1')">Mi Rueda</button>
+            <button class="user-btn" id="btn-user2" onclick="cambiarUsuario('usuario2')">Mi Amigo</button>
+        </div>
+
+        <!-- Gráfico Radar -->
+        <div class="chart-box">
+            <canvas id="canvasRueda"></canvas>
+        </div>
+
+        <!-- Inputs interactivos para modificar datos -->
+        <div class="inputs-grid" id="panel-inputs">
+            <!-- Se generan dinámicamente con JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Configuración inicial de las áreas
+        const areas = ['Salud', 'Finanzas', 'Carrera', 'Amor', 'Familia', 'Desarrollo'];
+        let usuarioActual = 'usuario1';
+        
+        // Puntuaciones por defecto si no hay nada guardado
+        const datosPorDefecto = {
+            usuario1:,
+            usuario2: [5, 5, 5, 5, 5, 5]
+        };
+
+        // Cargar datos guardados del navegador o usar los de defecto
+        let puntuaciones = {
+            usuario1: JSON.parse(localStorage.getItem('rueda_usuario1')) || [...datosPorDefecto.usuario1],
+            usuario2: JSON.parse(localStorage.getItem('rueda_usuario2')) || [...datosPorDefecto.usuario2]
+        };
+
+        // Inicializar el Gráfico de Chart.js
+        const ctx = document.getElementById('canvasRueda').getContext('2d');
+        
+        // Detectar si el dispositivo está en modo oscuro para ajustar colores del gráfico
+        const esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const colorLineas = esOscuro ? '#3f3f3f' : '#edece9';
+        const colorTexto = esOscuro ? '#9b9b9b' : '#787774';
+
+        const graficoRueda = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: areas,
+                datasets: [{
+                    label: 'Puntuación',
+                    data: puntuaciones[usuarioActual],
+                    backgroundColor: 'rgba(35, 131, 226, 0.15)',
+                    borderColor: '#2383e2',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#2383e2'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 10,
+                        ticks: { stepSize: 2, display: false },
+                        grid: { color: colorLineas },
+                        angleLines: { color: colorLineas },
+                        pointLabels: { color: colorTexto, font: { family: 'Plus Jakarta Sans', size: 11, weight: '500' } }
+                    }
+                }
+            }
+        });
+
+        // Crear los campos numéricos en la pantalla de forma dinámica
+        function generarInputs() {
+            const contenedor = document.getElementById('panel-inputs');
+            contenedor.innerHTML = ''; // Limpiar panel
+
+            areas.forEach((area, index) => {
+                const grupo = document.createElement('div');
+                grupo.className = 'input-group';
+                
+                grupo.innerHTML = `
+                    <label>${area}</label>
+                    <input type="number" min="0" max="10" value="${puntuaciones[usuarioActual][index]}" onchange="actualizarDato(${index}, this.value)">
+                `;
+                contenedor.appendChild(grupo);
+            });
+        }
+
+        // Actualizar el gráfico y guardar en memoria cuando cambias un número
+        function actualizarDato(index, valor) {
+            let num = parseInt(valor);
+            if (isNaN(num) || num < 0) num = 0;
+            if (num > 10) num = 10;
+
+            puntuaciones[usuarioActual][index] = num;
+            localStorage.setItem(`rueda_${usuarioActual}`, JSON.stringify(puntuaciones[usuarioActual]));
+
+            // Refrescar el gráfico
+            graficoRueda.data.datasets[0].data = puntuaciones[usuarioActual];
+            graficoRueda.update();
+        }
+
+        // Función para alternar entre "Mi Rueda" y "Mi Amigo"
+        function cambiarUsuario(nuevoUsuario) {
+            usuarioActual = nuevoUsuario;
+            
+            // Cambiar estilos de los botones
+            document.getElementById('btn-user1').classList.toggle('active', nuevoUsuario === 'usuario1');
+            document.getElementById('btn-user2').classList.toggle('active', nuevoUsuario === 'usuario2');
+
+            // Actualizar datos del gráfico e inputs
+            graficoRueda.data.datasets[0].data = puntuaciones[usuarioActual];
+            graficoRueda.update();
+            generarInputs();
+        }
+
+        // Arrancar la interfaz
+        generarInputs();
+    </script>
+</body>
+</html>
