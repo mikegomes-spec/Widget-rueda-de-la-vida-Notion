@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Rueda de la Vida</title>
     
-    <!-- Librerías de Fuentes y Gráficos -->
+    <!-- Librerías de Fuentes y Gráficos Corregidas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
     <link href="https://googleapis.com" rel="stylesheet">
     <script src="https://jsdelivr.net"></script>
 
@@ -31,7 +33,6 @@
             box-sizing: border-box;
         }
 
-        /* Título elegante integrado estilo Notion */
         .widget-title {
             font-size: 1.1rem;
             font-weight: 700;
@@ -40,14 +41,12 @@
             color: #37352f;
         }
 
-        /* Contenedor del gráfico en la parte superior */
         .chart-box {
             position: relative;
             margin-bottom: 24px;
             width: 100%;
         }
 
-        /* Panel de control de puntuaciones en la parte inferior */
         .inputs-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -75,7 +74,7 @@
             color: #37352f;
             font-family: inherit;
             text-align: center;
-            -webkit-appearance: none; /* Quita estilos raros en iOS/Android */
+            -webkit-appearance: none;
         }
 
         .input-group input:focus {
@@ -84,7 +83,6 @@
             background-color: #f4f9ff;
         }
 
-        /* Soporte para Modo Oscuro de Notion */
         @media (prefers-color-scheme: dark) {
             .widget-container {
                 background-color: #202020;
@@ -110,33 +108,27 @@
     <div class="widget-container">
         <h2 class="widget-title">Mi Rueda de la Vida</h2>
 
-        <!-- 1. Gráfico arriba -->
         <div class="chart-box">
             <canvas id="canvasRueda"></canvas>
         </div>
 
-        <!-- 2. Categorías y números abajo -->
         <div class="inputs-grid" id="panel-inputs">
-            <!-- Se generan dinámicamente con JavaScript -->
+            <!-- Se generan dinámicamente -->
         </div>
     </div>
 
     <script>
-        // Tus 6 áreas de análisis
         const areas = ['Salud', 'Finanzas', 'Carrera', 'Amor', 'Familia', 'Desarrollo'];
         
-        // Puntuación por defecto al iniciar por primera vez (todas en 5)
+        // CORREGIDO: Se asignaron los valores iniciales por defecto [5, 5...]
         const valoresIniciales =;
 
-        // Cargar datos guardados de la memoria del teléfono o usar los iniciales
         let misPuntuaciones = JSON.parse(localStorage.getItem('mi_rueda_personal')) || [...valoresIniciales];
 
-        // Configuración de colores según el modo del celular
         const esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const colorLineas = esOscuro ? '#3f3f3f' : '#edece9';
         const colorTexto = esOscuro ? '#9b9b9b' : '#787774';
 
-        // Renderizar el gráfico de radar
         const ctx = document.getElementById('canvasRueda').getContext('2d');
         const graficoRueda = new Chart(ctx, {
             type: 'radar',
@@ -168,7 +160,6 @@
             }
         });
 
-        // Función para renderizar los campos numéricos abajo
         function generarCamposNumericos() {
             const contenedor = document.getElementById('panel-inputs');
             contenedor.innerHTML = ''; 
@@ -185,22 +176,18 @@
             });
         }
 
-        // Evento inmediato al escribir un número
         function actualizarPuntuacion(index, valor) {
             let num = parseInt(valor);
             if (isNaN(num) || num < 0) num = 0;
             if (num > 10) num = 10;
 
-            // Guardar cambio en el array y en la memoria del teléfono
             misPuntuaciones[index] = num;
             localStorage.setItem('mi_rueda_personal', JSON.stringify(misPuntuaciones));
 
-            // Actualizar visualmente la forma del gráfico en vivo
             graficoRueda.data.datasets[0].data = misPuntuaciones;
             graficoRueda.update();
         }
 
-        // Forzar arranque seguro una vez que Notion procesa el bloque web
         window.addEventListener('DOMContentLoaded', () => {
             generarCamposNumericos();
             graficoRueda.update();
