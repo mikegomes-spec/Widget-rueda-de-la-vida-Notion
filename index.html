@@ -4,18 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Rueda de la Vida</title>
-    
-    <!-- Librerías de Fuentes y Gráficos Corregidas -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://gstatic.com" crossorigin>
-    <link href="https://googleapis.com" rel="stylesheet">
-    <script src="https://jsdelivr.net"></script>
-
     <style>
         body {
             margin: 0;
             padding: 12px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             background-color: transparent;
             color: #37352f;
             display: flex;
@@ -27,7 +20,7 @@
             border: 1px solid #edece9;
             border-radius: 12px;
             padding: 20px;
-            max-width: 450px;
+            max-width: 420px;
             width: 100%;
             box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.05);
             box-sizing: border-box;
@@ -42,9 +35,14 @@
         }
 
         .chart-box {
-            position: relative;
+            display: flex;
+            justify-content: center;
             margin-bottom: 24px;
             width: 100%;
+        }
+
+        .chart-box svg {
+            overflow: visible;
         }
 
         .inputs-grid {
@@ -83,6 +81,7 @@
             background-color: #f4f9ff;
         }
 
+        /* Soporte nativo para Modo Oscuro en Notion */
         @media (prefers-color-scheme: dark) {
             .widget-container {
                 background-color: #202020;
@@ -108,57 +107,118 @@
     <div class="widget-container">
         <h2 class="widget-title">Mi Rueda de la Vida</h2>
 
+        <!-- Gráfico SVG Autónomo -->
         <div class="chart-box">
-            <canvas id="canvasRueda"></canvas>
+            <svg id="svgRueda" width="280" height="280" viewBox="0 0 300 300">
+                <g id="grid-lines"></g>
+                <polygon id="radar-poly" fill="rgba(35, 131, 226, 0.18)" stroke="#2383e2" stroke-width="2.5"/>
+                <g id="radar-points"></g>
+                <g id="labels-group"></g>
+            </svg>
         </div>
 
-        <div class="inputs-grid" id="panel-inputs">
-            <!-- Se generan dinámicamente -->
-        </div>
+        <!-- Campos Numéricos -->
+        <div class="inputs-grid" id="panel-inputs"></div>
     </div>
 
     <script>
         const areas = ['Salud', 'Finanzas', 'Carrera', 'Amor', 'Familia', 'Desarrollo'];
-        
-        // CORREGIDO: Se asignaron los valores iniciales por defecto [5, 5...]
         const valoresIniciales =;
+        
+        let misPuntuaciones = JSON.parse(localStorage.getItem('mi_rueda_personal'));
+        if (!misPuntuaciones || misPuntuaciones.length !== areas.length) {
+            misPuntuaciones = [...valoresIniciales];
+        }
 
-        let misPuntuaciones = JSON.parse(localStorage.getItem('mi_rueda_personal')) || [...valoresIniciales];
+        const centro = 150;
+        const radioMax = 110;
+        const totalAreas = areas.length;
 
-        const esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const colorLineas = esOscuro ? '#3f3f3f' : '#edece9';
-        const colorTexto = esOscuro ? '#9b9b9b' : '#787774';
+        function obtenerCoordenadas(index, valor) {
+            const angulo = (Math.PI * 2 / totalAreas) * index - Math.PI / 2;
+            const r = (valor / 10) * radioMax;
+            return {
+                x: centro + r * Math.cos(angulo),
+                y: centro + r * Math.sin(angulo)
+            };
+        }
 
-        const ctx = document.getElementById('canvasRueda').getContext('2d');
-        const graficoRueda = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: areas,
-                datasets: [{
-                    data: misPuntuaciones,
-                    backgroundColor: 'rgba(35, 131, 226, 0.15)',
-                    borderColor: '#2383e2',
-                    borderWidth: 2,
-                    pointBackgroundColor: '#2383e2',
-                    pointRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    r: {
-                        min: 0,
-                        max: 10,
-                        ticks: { stepSize: 2, display: false },
-                        grid: { color: colorLineas },
-                        angleLines: { color: colorLineas },
-                        pointLabels: { color: colorTexto, font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } }
-                    }
+        function dibujarFondoGrid() {
+            const gridGroup = document.getElementById('grid-lines');
+            gridGroup.innerHTML = '';
+            
+            const esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const colorLineas = esOscuro ? '#3f3f3f' : '#edece9';
+
+            // Círculos de niveles (del 2 al 10)
+            for (let i = 2; i <= 10; i += 2) {
+                let puntosCorta = [];
+                for (let j = 0; j < totalAreas; j++) {
+                    let coord = obtenerCoordenadas(j, i);
+                    puntosCorta.push(`${coord.x},${coord.y}`);
                 }
+                const polygon = document.createElementNS('http://w3.org', 'polygon');
+                polygon.setAttribute('points', puntosCorta.join(' '));
+                polygon.setAttribute('fill', 'none');
+                polygon.setAttribute('stroke', colorLineas);
+                polygon.setAttribute('stroke-width', '1');
+                gridGroup.appendChild(polygon);
             }
-        });
+
+            // Ejes desde el centro
+            for (let j = 0; j < totalAreas; j++) {
+                let coord = obtenerCoordenadas(j, 10);
+                const line = document.createElementNS('http://w3.org', 'line');
+                line.setAttribute('x1', centro);
+                line.setAttribute('y1', centro);
+                line.setAttribute('x2', coord.x);
+                line.setAttribute('y2', coord.y);
+                line.setAttribute('stroke', colorLineas);
+                line.setAttribute('stroke-width', '1');
+                gridGroup.appendChild(line);
+            }
+        }
+
+        function actualizarGraficoVisual() {
+            dibujarFondoGrid();
+            
+            const esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const colorTexto = esOscuro ? '#9b9b9b' : '#6a6965';
+
+            let puntosData = [];
+            const pointsGroup = document.getElementById('radar-points');
+            const labelsGroup = document.getElementById('labels-group');
+            
+            pointsGroup.innerHTML = '';
+            labelsGroup.innerHTML = '';
+
+            misPuntuaciones.forEach((valor, index) => {
+                let coord = obtenerCoordenadas(index, valor);
+                puntosData.push(`${coord.x},${coord.y}`);
+
+                // Puntos azules interactivos
+                const circle = document.createElementNS('http://w3.org', 'circle');
+                circle.setAttribute('cx', coord.x);
+                circle.setAttribute('cy', coord.y);
+                circle.setAttribute('r', '4');
+                circle.setAttribute('fill', '#2383e2');
+                pointsGroup.appendChild(circle);
+
+                // Etiquetas del texto externo
+                let coordTexto = obtenerCoordenadas(index, 11.8);
+                const text = document.createElementNS('http://w3.org', 'text');
+                text.setAttribute('x', coordTexto.x);
+                text.setAttribute('y', coordTexto.y + 4);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('fill', colorTexto);
+                text.setAttribute('font-size', '11');
+                text.setAttribute('font-weight', '600');
+                text.textContent = areas[index];
+                labelsGroup.appendChild(text);
+            });
+
+            document.getElementById('radar-poly').setAttribute('points', puntosData.join(' '));
+        }
 
         function generarCamposNumericos() {
             const contenedor = document.getElementById('panel-inputs');
@@ -167,7 +227,6 @@
             areas.forEach((area, index) => {
                 const grupo = document.createElement('div');
                 grupo.className = 'input-group';
-                
                 grupo.innerHTML = `
                     <label>${area}</label>
                     <input type="number" min="0" max="10" inputmode="numeric" value="${misPuntuaciones[index]}" oninput="actualizarPuntuacion(${index}, this.value)">
@@ -183,15 +242,17 @@
 
             misPuntuaciones[index] = num;
             localStorage.setItem('mi_rueda_personal', JSON.stringify(misPuntuaciones));
-
-            graficoRueda.data.datasets[0].data = misPuntuaciones;
-            graficoRueda.update();
+            actualizarGraficoVisual();
         }
 
+        // Inicialización limpia
         window.addEventListener('DOMContentLoaded', () => {
             generarCamposNumericos();
-            graficoRueda.update();
+            actualizarGraficoVisual();
         });
+
+        // Escuchar cambios de color de Notion si pasa a modo oscuro
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', actualizarGraficoVisual);
     </script>
 </body>
 </html>
